@@ -125,6 +125,8 @@ GBuffer getGBuffer(vec3 worldPosition, vec3 worldNormal) {
     gl.uniform1f(program.getUniform('u_audioLevel'), audioAnalyzer.level);
     gl.uniform1f(program.getUniform('u_elapsedSecs'), elapsedSecs);
   },
+  marchIterations: 128,
+  distanceScale: 0.8,
 });
 
 const lightingApplier = new LightingApplier(gl);
@@ -257,7 +259,7 @@ delayFolder.addInput(globalParameters.delay, 'active').on('change', value => {
 });
 delayFolder.addInput(globalParameters.delay, 'intensity', {
   min: 0.0,
-  max: 1.0,
+  max: 0.99,
 }).on('change', value => {
   delayFilter.intensity = value;
 });

@@ -13,6 +13,10 @@ layout (location = 4) out vec3 o_gBufferTarget4;
 uniform mat4 u_cameraModelMatrix;
 uniform float u_near;
 uniform float u_far;
+uniform int u_marchIterations;
+uniform float u_distanceScale;
+uniform float u_hitDistance;
+uniform float u_diffDelta;
 
 struct GBuffer {
   vec3 diffuse;
@@ -50,14 +54,14 @@ void main(void) {
 
   float t = u_near;
   vec3 pos = ro + t * rd;
-  for (int i = 0; i < 64; i++) {
-    float d = estimateDistance(pos);
+  for (int i = 0; i < u_marchIterations; i++) {
+    float d = u_distanceScale * estimateDistance(pos);
     t += d;
     if (t >= u_far) {
       break;
     }
     pos += d * rd;
-    if (d < 0.01) {
+    if (d < u_hitDistance) {
       vec3 normal = calcNormal(pos);
       GBuffer gBuffer = getGBuffer(pos, normal);
       setGBuffer(gBuffer);

@@ -13,6 +13,10 @@ enum FragmentUniforms {
   CAMERA_MODEL_MATRIX = 'u_cameraModelMatrix',
   NEAR = 'u_near',
   FAR = 'u_far',
+  MARCH_ITERATIONS = 'u_marchIterations',
+  DISTANCE_SCALE = 'u_distanceScale',
+  HIT_DISTANCE = 'u_hitDistance',
+  DIFF_DELTA = 'u_diffDelta',
 }
 
 const DEFAULT_ESTIMATE_DISTANCE_CHUNK = `
@@ -50,23 +54,39 @@ type ConstructorOptions = {
   getGBufferChunk?: string,
   uniforms?: string[],
   uniformsCallback?: UniformCallback,
+  marchIterations?: number,
+  distanceScale?: number,
+  hitDistance?: number,
+  diffDelta?: number,
 };
 
 export class ScreenSpaceRaymarchGeometry {
   private program: Program;
   private uniformsCallback: UniformCallback;
+  marchIterations: number;
+  distanceScale: number;
+  hitDistance: number;
+  diffDelta: number;
 
   constructor(gl: WebGL2RenderingContext, {
     estimateDisntaceChunk =  DEFAULT_ESTIMATE_DISTANCE_CHUNK,
     getGBufferChunk = DEFAULT_GET_GBUFFER_CHUNK,
     uniforms = [],
     uniformsCallback = () => {},
+    marchIterations = 64,
+    distanceScale = 1.0,
+    hitDistance = 0.01,
+    diffDelta = 0.01,
   }: ConstructorOptions = {}) {
     const vertShader = new VertexShader(gl, screenSpaceRaymarchGeometryVertexSource, new Set(Object.values(VertexUniforms)));
     const fragShader = new FragmentShader(
       gl, createFragmentShaderSource(estimateDisntaceChunk, getGBufferChunk), new Set([...Object.values(FragmentUniforms), ...uniforms]));
     this.program = new Program(gl, vertShader, fragShader);
     this.uniformsCallback = uniformsCallback;
+    this.marchIterations = marchIterations;
+    this.distanceScale = distanceScale;
+    this.hitDistance = hitDistance;
+    this.diffDelta = diffDelta;
   }
 
   render(gl: WebGL2RenderingContext, camera: PerspectiveCamera): void {
@@ -76,6 +96,10 @@ export class ScreenSpaceRaymarchGeometry {
     gl.uniform2f(this.program.getUniform(VertexUniforms.FOCAL_SCALE), camera.aspect * focalScaleY, focalScaleY);
     gl.uniform1f(this.program.getUniform(FragmentUniforms.NEAR), camera.near);
     gl.uniform1f(this.program.getUniform(FragmentUniforms.FAR), camera.far);
+    gl.uniform1i(this.program.getUniform(FragmentUniforms.MARCH_ITERATIONS), this.marchIterations);
+    gl.uniform1f(this.program.getUniform(FragmentUniforms.DISTANCE_SCALE), this.distanceScale);
+    gl.uniform1f(this.program.getUniform(FragmentUniforms.HIT_DISTANCE), this.hitDistance);
+    gl.uniform1f(this.program.getUniform(FragmentUniforms.DIFF_DELTA), this.diffDelta);
     this.uniformsCallback(gl, this.program);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
