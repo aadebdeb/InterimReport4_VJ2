@@ -23,7 +23,7 @@ export class AudioAnalyzer {
     this.minDecibels = minDecibels;
     this.maxDecibels = maxDecibels;
     this.timeDomainArray = new Float32Array(fftSize);
-    this.frequencyDomainArray = new Float32Array(new Array(0.5 * fftSize).fill(minDecibels));
+    this.frequencyDomainArray = new Float32Array(new Array(0.5 * fftSize).fill(0.0));
   }
 
   async initialize(): Promise<void> {
@@ -47,6 +47,9 @@ export class AudioAnalyzer {
     }
     this.analyzer.getFloatTimeDomainData(this.timeDomainArray);
     this.analyzer.getFloatFrequencyData(this.frequencyDomainArray);
+    for (let i = 0; i < this.frequencyDomainArray.length; i++) {
+      this.frequencyDomainArray[i] = this.frequencyDomainArray[i] / (this.maxDecibels - this.minDecibels);
+    }
     this._level = this.timeDomainArray.reduce((sum, value) => sum + Math.abs(value), 0.0) / this.timeDomainArray.length;
   }
 

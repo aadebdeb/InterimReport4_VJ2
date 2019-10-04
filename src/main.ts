@@ -42,8 +42,8 @@ let canvasTarget = new CanvasRenderTarget(canvas.width, canvas.height);
 
 const tonemapFilter = new TonemapFilter(gl);
 const bloomFilter = new BloomFilter(gl, width, height, {
-  threshold: 0.5,
-  intensity: 0.3,
+  threshold: 0.95,
+  intensity: 0.1,
   hdr: true,
 });
 const fxaaFilter = new FxaaFilter(gl);
@@ -60,7 +60,7 @@ const ldrFilters: Filter[] = [
   delayFilter,
 ];
 
-const camera = new PerspectiveCamera(width / height, 45.0, 0.1, 1000.0);
+const camera = new PerspectiveCamera(width / height, 60.0, 0.1, 100.0);
 camera.lookAt(
   new Vector3(10.0, 15.0, 8.0),
   Vector3.zero,
@@ -71,8 +71,13 @@ const screenSpaceRaymarchGeometry = new ScreenSpaceRaymarchGeometry(gl, {
   estimateDisntaceChunk: `
 uniform float u_audioLevel;
 uniform float u_elapsedSecs;
+uniform float u_fftLevels[16];
 
 #define SPHERE_RADIUS 3.0
+
+float random(float x){
+  return fract(sin(x * 12.9898) * 43758.5453);
+}
 
 mat2 rotate(float r) {
   float c = cos(r);
@@ -80,13 +85,26 @@ mat2 rotate(float r) {
   return mat2(c, s, -s, c);
 }
 
+vec3 toObjectPos(vec3 p) {
+  p.x = abs(p.x) - 3.0;
+  return p;
+}
+
 float estimateDistance(vec3 p) {
+  p = toObjectPos(p);
   vec3 q = p;
 
-  p.y += sign(p.x) * smoothstep(0.0, 1.0, abs(p.x));
+  // p.y += sign(p.x) * smoothstep(0.0, 1.0, abs(p.x));
 
-  p.xz *= rotate(0.1 * u_elapsedSecs);
-  p.y += u_audioLevel * 5.0 * sin(2.0 * p.x + 5.0 * u_elapsedSecs);
+  // p.xz *= rotate(0.1 * u_elapsedSecs);
+
+  for (int i = 0; i < 16; i++) {
+    p.xy *= rotate(random(float(i)) + u_elapsedSecs);
+    p.xz *= rotate(random(float(i) + 0.43) + u_elapsedSecs);
+    p.y += u_audioLevel * u_fftLevels[i] * 0.5 * sin(2.0 * p.x + 5.0 * u_elapsedSecs);
+  }
+
+  // p.y += u_audioLevel * 5.0 * sin(2.0 * p.x + 5.0 * u_elapsedSecs);
   float d =  length(p) - SPHERE_RADIUS;
 
   float s = 1000.0;
@@ -106,6 +124,7 @@ vec3 palette(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
 }
 
 GBuffer getGBuffer(vec3 worldPosition, vec3 worldNormal) {
+  vec3 p = toObjectPos(worldPosition);
   GBuffer gBuffer;
   gBuffer.diffuse = vec3(0.01);
   gBuffer.specular = vec3(0.3);
@@ -113,20 +132,24 @@ GBuffer getGBuffer(vec3 worldPosition, vec3 worldNormal) {
   gBuffer.worldPosition = worldPosition;
   gBuffer.worldNormal = worldNormal;
   gBuffer.emission = mix(
-    palette(20.0 * length(worldPosition) + u_elapsedSecs, vec3(0.2), vec3(0.8), vec3(1.0, 2.0, 1.5), vec3(1.0, 0.1, 0.02)),
+    palette(20.0 * length(p) + u_elapsedSecs, vec3(0.2), vec3(0.8), vec3(1.0, 2.0, 1.5), vec3(1.0, 0.1, 0.02)),
     vec3(0.00),
-    smoothstep(0.98 * SPHERE_RADIUS, 0.99 * SPHERE_RADIUS, length(worldPosition))
+    smoothstep(0.98 * SPHERE_RADIUS, 0.99 * SPHERE_RADIUS, length(p))
   );
   return gBuffer;
 }
   `,
-  uniforms: ['u_audioLevel', 'u_elapsedSecs'],
+  uniforms: ['u_audioLevel', 'u_elapsedSecs', ...(new Array(16).fill(null).map((_, i) => `u_fftLevels[${i}]`))],
   uniformsCallback: (gl, program) => {
     gl.uniform1f(program.getUniform('u_audioLevel'), audioAnalyzer.level);
     gl.uniform1f(program.getUniform('u_elapsedSecs'), elapsedSecs);
+    for (let i = 0; i < 16; i++) {
+      gl.uniform1f(program.getUniform(`u_fftLevels[${i}]`), audioAnalyzer.frequencyDomainArray[i * 16]);
+    }
   },
-  marchIterations: 128,
-  distanceScale: 0.8,
+  marchIterations: 256,
+  distanceScale: 0.5,
+  hitDistance: 0.001,
 });
 
 const lightingApplier = new LightingApplier(gl);
@@ -223,7 +246,7 @@ pane.addInput(globalParameters, 'cameraX', {
   max: 20.0,
 }).on('change', (value) => {
   camera.lookAt(
-    new Vector3(value, 0.0, 8.0),
+    new Vector3(value, 0.0, 10.0),
     Vector3.zero,
     new Vector3(0.0, 1.0, 0.0)
   );
