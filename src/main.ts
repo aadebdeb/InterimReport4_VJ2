@@ -85,6 +85,7 @@ const screenSpaceRaymarhParameters = {
   foldX: false,
   foldZ: false,
   repeatY: false,
+  dispIntensity: 0.0,
 }
 
 const screenSpaceRaymarchGeometry = new ScreenSpaceRaymarchGeometry(gl, {
@@ -95,6 +96,7 @@ uniform float u_fftLevels[16];
 uniform bool u_foldX;
 uniform bool u_foldZ;
 uniform bool u_repeatY;
+uniform float u_dispIntensity;
 
 #define SPHERE_RADIUS 3.0
 
@@ -108,10 +110,11 @@ mat2 rotate(float r) {
   return mat2(c, s, -s, c);
 }
 
-#define smin(a, b, k) (-log2(exp2(-k*a)+exp2(-k*b))/k)
-#define sabs(p, k) (abs(p)-2.0*smin(0.0,abs(p),k))
-
 vec3 toObjectPos(vec3 p) {
+
+  // float offset = sin(1.5 * p.y + 1.0 * u_elapsedSecs);
+  // p.x += 10.0 * u_audioLevel * sign(offset) * pow(abs(offset), 1.0);
+
   if (u_foldX) {
     p.x = abs(p.x) - SPHERE_RADIUS;
   }
@@ -121,6 +124,7 @@ vec3 toObjectPos(vec3 p) {
   if (u_repeatY) {
     p.y = mod(p.y, 2.0 * SPHERE_RADIUS) - SPHERE_RADIUS;
   }
+
   return p;
 }
 
@@ -135,17 +139,17 @@ float estimateDistance(vec3 p) {
   for (int i = 0; i < 16; i++) {
     p.xy *= rotate(random(float(i)) + u_elapsedSecs);
     p.xz *= rotate(random(float(i) + 0.43) + u_elapsedSecs);
-    p.y += 5.0 * u_audioLevel * u_fftLevels[i] * 0.5 * sin(2.0 * p.x + 5.0 * u_elapsedSecs);
+    p.y += u_dispIntensity * u_audioLevel * u_fftLevels[i] * 0.5 * sin(2.0 * p.x + 5.0 * u_elapsedSecs);
   }
 
   // p.y += u_audioLevel * 5.0 * sin(2.0 * p.x + 5.0 * u_elapsedSecs);
   float d =  length(p) - SPHERE_RADIUS;
 
   float s = 1000.0;
-  for (float i = 0.0; i < 5.0; i += 1.0) {
-    vec3 sp = q + vec3(4.0 * sin(1.43 * u_elapsedSecs), 4.5 * sin(1.52 * u_elapsedSecs), 4.2 * sin(1.73 * u_elapsedSecs));
-    s = min(s, length(sp) - 3.0);
-  }
+  // for (float i = 0.0; i < 5.0; i += 1.0) {
+  //   vec3 sp = q + vec3(4.0 * sin(1.43 * u_elapsedSecs), 4.5 * sin(1.52 * u_elapsedSecs), 4.2 * sin(1.73 * u_elapsedSecs));
+  //   s = min(s, length(sp) - 3.0);
+  // }
 
   // float s = length(q.xy) - 1.0;
 
@@ -179,6 +183,7 @@ GBuffer getGBuffer(vec3 worldPosition, vec3 worldNormal) {
     'u_foldX',
     'u_foldZ',
     'u_repeatY',
+    'u_dispIntensity',
     ...(new Array(16).fill(null).map((_, i) => `u_fftLevels[${i}]`))],
   uniformsCallback: (gl, program) => {
     gl.uniform1f(program.getUniform('u_audioLevel'), audioAnalyzer.level);
@@ -186,6 +191,7 @@ GBuffer getGBuffer(vec3 worldPosition, vec3 worldNormal) {
     gl.uniform1i(program.getUniform('u_foldX'), screenSpaceRaymarhParameters.foldX ? 1 : 0);
     gl.uniform1i(program.getUniform('u_foldZ'), screenSpaceRaymarhParameters.foldZ ? 1 : 0);
     gl.uniform1i(program.getUniform('u_repeatY'), screenSpaceRaymarhParameters.repeatY ? 1: 0);
+    gl.uniform1f(program.getUniform('u_dispIntensity'), screenSpaceRaymarhParameters.dispIntensity);
     for (let i = 0; i < 16; i++) {
       gl.uniform1f(program.getUniform(`u_fftLevels[${i}]`), audioAnalyzer.frequencyDomainArray[i * 16]);
     }
@@ -298,6 +304,7 @@ const loop = () => {
   stats.begin();
 
   audioAnalyzer.update();
+  globalParameters.audioLevel = audioAnalyzer.level;
 
   const currentTime = performance.now();
   const deltaSecs = Math.min(0.1, (currentTime - previousTime) * 0.001);
@@ -352,7 +359,8 @@ addEventListener('resize', () => {
 const pane = new Tweakpane();
 
 const globalParameters = {
-  audioVolume: 1.0,
+  audioLevel: 0.0,
+  audioGain: 1.0,
 
   cameraType: 'fixed',
 
@@ -360,6 +368,7 @@ const globalParameters = {
     foldX: screenSpaceRaymarhParameters.foldX,
     foldZ: screenSpaceRaymarhParameters.foldZ,
     repeatY: screenSpaceRaymarhParameters.repeatY,
+    dispIntensity: screenSpaceRaymarhParameters.dispIntensity,
   },
 
   bloom: {
@@ -386,7 +395,9 @@ pane.addButton({
   title: 'connect to midi'
 }).on('click', () => midiManager.initialize());
 
-pane.addInput(globalParameters, 'audioVolume', {
+pane.addMonitor(globalParameters, 'audioLevel');
+
+pane.addInput(globalParameters, 'audioGain', {
   min: 0.0,
   max: 5.0,
 }).on('change', (value) => {
@@ -424,6 +435,12 @@ raymarchFolder.addInput(globalParameters.raymarch, 'foldZ').on('change', value =
 });
 raymarchFolder.addInput(globalParameters.raymarch, 'repeatY').on('change', value => {
   screenSpaceRaymarhParameters.repeatY = value;
+});
+raymarchFolder.addInput(globalParameters.raymarch, 'dispIntensity', {
+  min: 0.0,
+  max: 10.0,
+}).on('change', value => {
+  screenSpaceRaymarhParameters.dispIntensity = value;
 });
 
 const bloomFolder = pane.addFolder({

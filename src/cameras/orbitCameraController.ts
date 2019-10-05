@@ -17,10 +17,10 @@ export class OrbitCameraController {
   reset() {
     this.theta = Math.random() * Math.PI * 2.0;
     this.phi = Math.random() * Math.PI * 2.0;
-    this.thetaSpeed = 0.1;
-    this.phiSpeed = 0.3;
-    this.height = 10.0;
-    this.radius = 10.0;
+    this.thetaSpeed = 0.2;
+    this.phiSpeed = 0.5;
+    this.height = 20.0;
+    this.radius = 10.0 + Math.random() * 15.0;
   }
 
   update(deltaSecs: number): void {
