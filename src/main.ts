@@ -5,6 +5,7 @@ import { Vector3 } from './math/vector3';
 import { PerspectiveCamera } from './cameras/perspectiveCamera';
 import { OrbitCameraController } from './cameras/orbitCameraController';
 import { AudioAnalyzer } from './audio/audioAnalyzer';
+import { MidiManager } from './audio/midiManager';
 import { ScreenSpaceRaymarchGeometry } from './geometries/screenSpaceRaymarchGeometry';
 import { GBuffer } from './core/gBuffer';
 import { SwappableHdrRenderTarget } from './renderTargets/swappableHdrRenderTarget';
@@ -81,7 +82,9 @@ let updateOrbitCameraCallback = (deltaSecs: number) => {
 let updateCameraCallback: (deltaSecs: number) => void = updateFixedCameraCallback;
 
 const screenSpaceRaymarhParameters = {
-  fold: false,
+  foldX: false,
+  foldZ: false,
+  repeatY: false,
 }
 
 const screenSpaceRaymarchGeometry = new ScreenSpaceRaymarchGeometry(gl, {
@@ -89,7 +92,9 @@ const screenSpaceRaymarchGeometry = new ScreenSpaceRaymarchGeometry(gl, {
 uniform float u_audioLevel;
 uniform float u_elapsedSecs;
 uniform float u_fftLevels[16];
-uniform bool u_fold;
+uniform bool u_foldX;
+uniform bool u_foldZ;
+uniform bool u_repeatY;
 
 #define SPHERE_RADIUS 3.0
 
@@ -107,10 +112,14 @@ mat2 rotate(float r) {
 #define sabs(p, k) (abs(p)-2.0*smin(0.0,abs(p),k))
 
 vec3 toObjectPos(vec3 p) {
-  if (u_fold) {
-    //p.x = abs(p.x) - 3.0;
-    p.xyz = abs(p.xyz) - 3.0;
-    p.y = mod(p.y, 6.0) - 3.0;
+  if (u_foldX) {
+    p.x = abs(p.x) - SPHERE_RADIUS;
+  }
+  if (u_foldZ) {
+    p.z = abs(p.z) - SPHERE_RADIUS;
+  }
+  if (u_repeatY) {
+    p.y = mod(p.y, 2.0 * SPHERE_RADIUS) - SPHERE_RADIUS;
   }
   return p;
 }
@@ -164,11 +173,19 @@ GBuffer getGBuffer(vec3 worldPosition, vec3 worldNormal) {
   return gBuffer;
 }
   `,
-  uniforms: ['u_audioLevel', 'u_elapsedSecs', 'u_fold', ...(new Array(16).fill(null).map((_, i) => `u_fftLevels[${i}]`))],
+  uniforms: [
+    'u_audioLevel',
+    'u_elapsedSecs',
+    'u_foldX',
+    'u_foldZ',
+    'u_repeatY',
+    ...(new Array(16).fill(null).map((_, i) => `u_fftLevels[${i}]`))],
   uniformsCallback: (gl, program) => {
     gl.uniform1f(program.getUniform('u_audioLevel'), audioAnalyzer.level);
     gl.uniform1f(program.getUniform('u_elapsedSecs'), elapsedSecs);
-    gl.uniform1i(program.getUniform('u_fold'), screenSpaceRaymarhParameters.fold ? 1 : 0);
+    gl.uniform1i(program.getUniform('u_foldX'), screenSpaceRaymarhParameters.foldX ? 1 : 0);
+    gl.uniform1i(program.getUniform('u_foldZ'), screenSpaceRaymarhParameters.foldZ ? 1 : 0);
+    gl.uniform1i(program.getUniform('u_repeatY'), screenSpaceRaymarhParameters.repeatY ? 1: 0);
     for (let i = 0; i < 16; i++) {
       gl.uniform1f(program.getUniform(`u_fftLevels[${i}]`), audioAnalyzer.frequencyDomainArray[i * 16]);
     }
@@ -181,6 +198,98 @@ GBuffer getGBuffer(vec3 worldPosition, vec3 worldNormal) {
 const lightingApplier = new LightingApplier(gl);
 
 const audioAnalyzer = new AudioAnalyzer();
+// for KORG nanoKONTROL2
+const midiManager = new MidiManager(new Map([
+  // slider1
+  [[176, 0], (value) => console.log(`slider1: ${value}`)],
+  // slider2
+  [[176, 1], (value) => console.log(`slider2: ${value}`)],
+  // slider3
+  [[176, 2], (value) => console.log(`slider3: ${value}`)],
+  // slider4
+  [[176, 3], (value) => console.log(`slider4: ${value}`)],
+  // slider5
+  [[176, 4], (value) => console.log(`slider5: ${value}`)],
+  // slider6
+  [[176, 5], (value) => console.log(`slider6: ${value}`)],
+  // slider7
+  [[176, 6], (value) => console.log(`slider7: ${value}`)],
+  // slider8
+  [[176, 7], (value) => console.log(`slider8: ${value}`)],
+
+  // knob1
+  [[176, 16], (value) => console.log(`knob1: ${value}`)],
+  // knob2
+  [[176, 17], (value) => console.log(`knob2: ${value}`)],
+  // knob3
+  [[176, 18], (value) => console.log(`knob3: ${value}`)],
+  // knob4
+  [[176, 19], (value) => console.log(`knob4: ${value}`)],
+  // knob5
+  [[176, 20], (value) => console.log(`knob5: ${value}`)],
+  // knob6
+  [[176, 21], (value) => console.log(`knob6: ${value}`)],
+  // knob7
+  [[176, 22], (value) => console.log(`knob7: ${value}`)],
+  // knob8
+  [[176, 23], (value) => delayFilter.intensity = value,],
+
+  // S1, M1, R1
+  [[176, 32], (value) => console.log(`S1: ${value}`)],
+  [[176, 48], (value) => console.log(`M1: ${value}`)],
+  [[176, 64], (value) => console.log(`R1: ${value}`)],
+  // S2, M2, R2
+  [[176, 33], (value) => console.log(`S2: ${value}`)],
+  [[176, 49], (value) => console.log(`M2: ${value}`)],
+  [[176, 65], (value) => console.log(`R2: ${value}`)],
+  // S3, M3, R3
+  [[176, 34], (value) => console.log(`S3: ${value}`)],
+  [[176, 50], (value) => console.log(`M3: ${value}`)],
+  [[176, 66], (value) => console.log(`R3: ${value}`)],
+  // S4, M4, R4
+  [[176, 35], (value) => console.log(`S4: ${value}`)],
+  [[176, 51], (value) => console.log(`M4: ${value}`)],
+  [[176, 67], (value) => console.log(`R4: ${value}`)],
+  // S5, M5, R5
+  [[176, 36], (value) => console.log(`S5: ${value}`)],
+  [[176, 52], (value) => console.log(`M5: ${value}`)],
+  [[176, 68], (value) => console.log(`R5: ${value}`)],
+  // S6, M6, R6
+  [[176, 37], (value) => console.log(`S6: ${value}`)],
+  [[176, 53], (value) => console.log(`M6: ${value}`)],
+  [[176, 69], (value) => console.log(`R6: ${value}`)],
+  // S7, M7, R7
+  [[176, 38], (value) => console.log(`S7: ${value}`)],
+  [[176, 54], (value) => console.log(`M7: ${value}`)],
+  [[176, 70], (value) => console.log(`R7: ${value}`)],
+  // S8, M8, R8
+  [[176, 39], (value) => console.log(`S8: ${value}`)],
+  [[176, 55], (value) => console.log(`M8: ${value}`)],
+  [[176, 71], (value) => console.log(`R8: ${value}`)],
+
+  // Rewind
+  [[176, 43], (value) => {
+    if (value === 1) {
+      if (updateCameraCallback === updateOrbitCameraCallback) {
+        updateCameraCallback = updateFixedCameraCallback;
+      } else if (updateCameraCallback === updateFixedCameraCallback) {
+        updateCameraCallback = updateOrbitCameraCallback;
+      } else {
+        throw new Error('no camera type');
+      }
+    }
+  }],
+  // Forward
+  [[176, 44], (value) => console.log(`Forward: ${value}`)],
+
+  // Stop
+  [[176, 42], (value) => console.log(`Stop: ${value}`)],
+  // Start
+  [[176, 41], (value) => console.log(`Start: ${value}`)],
+  // Record
+  [[176, 45], (value) => console.log(`Start: ${value}`)],
+
+]));
 
 let requestId: number | null = null;
 let elapsedSecs = 0.0;
@@ -248,7 +357,9 @@ const globalParameters = {
   cameraType: 'fixed',
 
   raymarch: {
-    fold: screenSpaceRaymarhParameters.fold,
+    foldX: screenSpaceRaymarhParameters.foldX,
+    foldZ: screenSpaceRaymarhParameters.foldZ,
+    repeatY: screenSpaceRaymarhParameters.repeatY,
   },
 
   bloom: {
@@ -270,6 +381,10 @@ const globalParameters = {
 pane.addButton({
   title: 'start audio capture',
 }).on('click', () => audioAnalyzer.initialize());
+
+pane.addButton({
+  title: 'connect to midi'
+}).on('click', () => midiManager.initialize());
 
 pane.addInput(globalParameters, 'audioVolume', {
   min: 0.0,
@@ -301,8 +416,14 @@ const raymarchFolder = pane.addFolder({
   title: 'raymarch',
   expanded: false,
 });
-raymarchFolder.addInput(globalParameters.raymarch, 'fold').on('change', value => {
-  screenSpaceRaymarhParameters.fold = value;
+raymarchFolder.addInput(globalParameters.raymarch, 'foldX').on('change', value => {
+  screenSpaceRaymarhParameters.foldX = value;
+});
+raymarchFolder.addInput(globalParameters.raymarch, 'foldZ').on('change', value => {
+  screenSpaceRaymarhParameters.foldZ = value;
+});
+raymarchFolder.addInput(globalParameters.raymarch, 'repeatY').on('change', value => {
+  screenSpaceRaymarhParameters.repeatY = value;
 });
 
 const bloomFolder = pane.addFolder({
