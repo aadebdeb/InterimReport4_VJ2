@@ -48,7 +48,7 @@ export class AudioAnalyzer {
     this.analyzer.getFloatTimeDomainData(this.timeDomainArray);
     this.analyzer.getFloatFrequencyData(this.frequencyDomainArray);
     for (let i = 0; i < this.frequencyDomainArray.length; i++) {
-      this.frequencyDomainArray[i] = this.frequencyDomainArray[i] / (this.maxDecibels - this.minDecibels);
+      this.frequencyDomainArray[i] = (this.frequencyDomainArray[i] - this.minDecibels) / (this.maxDecibels - this.minDecibels);
     }
     this._level = this.timeDomainArray.reduce((sum, value) => sum + Math.abs(value), 0.0) / this.timeDomainArray.length;
   }

@@ -9,4 +9,5 @@ export interface Camera {
   readonly position: Vector3;
   readonly near: number;
   readonly far: number;
+  lookAt(position: Vector3, target: Vector3, up: Vector3): Camera;
 }

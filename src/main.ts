@@ -3,6 +3,7 @@ import Stats from 'stats.js';
 
 import { Vector3 } from './math/vector3';
 import { PerspectiveCamera } from './cameras/perspectiveCamera';
+import { OrbitCameraController } from './cameras/orbitCameraController';
 import { AudioAnalyzer } from './audio/audioAnalyzer';
 import { ScreenSpaceRaymarchGeometry } from './geometries/screenSpaceRaymarchGeometry';
 import { GBuffer } from './core/gBuffer';
@@ -15,6 +16,7 @@ import { TonemapFilter } from './filters/tonemapFilter';
 import { BloomFilter } from './filters/bloomFilter';
 import { FxaaFilter } from './filters/fxaaFilter';
 import { DelayFilter } from './filters/delayFilter';
+import { DivideFilter } from './filters/divideFilter';
 import { CopyToCanvasFilter } from './filters/copyToCanvasFilter';
 
 const canvas = document.createElement('canvas');
@@ -50,6 +52,8 @@ const fxaaFilter = new FxaaFilter(gl);
 const delayFilter = new DelayFilter(gl, width, height, {
   intensity: 0.1,
 });
+const divideFilter = new DivideFilter(gl);
+divideFilter.active = false;
 const copyToCanvasFilter = new CopyToCanvasFilter(gl);
 
 const hdrFilters: Filter[] = [
@@ -58,14 +62,23 @@ const hdrFilters: Filter[] = [
 const ldrFilters: Filter[] = [
   fxaaFilter,
   delayFilter,
+  divideFilter,
 ];
 
 const camera = new PerspectiveCamera(width / height, 60.0, 0.1, 100.0);
-camera.lookAt(
-  new Vector3(10.0, 15.0, 8.0),
-  Vector3.zero,
-  new Vector3(0.0, 1.0, 0.0)
-);
+const orbitCameraController = new OrbitCameraController(camera);
+
+let updateFixedCameraCallback = () => {
+  camera.lookAt(
+    new Vector3(0.0, 0.0, 8.0),
+    Vector3.zero,
+    new Vector3(0.0, 1.0, 0.0)
+  );
+}
+let updateOrbitCameraCallback = (deltaSecs: number) => {
+  orbitCameraController.update(deltaSecs);
+}
+let updateCameraCallback: (deltaSecs: number) => void = updateFixedCameraCallback;
 
 const screenSpaceRaymarchGeometry = new ScreenSpaceRaymarchGeometry(gl, {
   estimateDisntaceChunk: `
@@ -87,6 +100,7 @@ mat2 rotate(float r) {
 
 vec3 toObjectPos(vec3 p) {
   p.x = abs(p.x) - 3.0;
+  // p.xyz = abs(p.xyz) - 3.0;
   return p;
 }
 
@@ -169,6 +183,9 @@ const loop = () => {
   elapsedSecs += deltaSecs;
   previousTime = currentTime;
 
+  updateCameraCallback(deltaSecs);
+  // orbitCameraController.update(deltaSecs);
+
   gl.enable(gl.DEPTH_TEST);
   gl.bindFramebuffer(gl.FRAMEBUFFER, gBuffer.framebuffer);
   gl.viewport(0.0, 0.0, gBuffer.width, gBuffer.height);
@@ -215,13 +232,10 @@ addEventListener('resize', () => {
 
 const pane = new Tweakpane();
 
-pane.addButton({
-  title: 'start audio capture',
-}).on('click', () => audioAnalyzer.initialize());
-
 const globalParameters = {
   audioVolume: 1.0,
-  cameraX: 0.0,
+
+  cameraType: 'fixed',
 
   bloom: {
     active: bloomFilter.active,
@@ -231,8 +245,17 @@ const globalParameters = {
   delay: {
     active: delayFilter.active,
     intensity: delayFilter.intensity,
+  },
+  divide: {
+    active: divideFilter.active,
+    divideNum: divideFilter.divideNum,
   }
 };
+
+
+pane.addButton({
+  title: 'start audio capture',
+}).on('click', () => audioAnalyzer.initialize());
 
 pane.addInput(globalParameters, 'audioVolume', {
   min: 0.0,
@@ -241,17 +264,24 @@ pane.addInput(globalParameters, 'audioVolume', {
   audioAnalyzer.gain = value;
 });
 
-pane.addInput(globalParameters, 'cameraX', {
-  min: -20.0,
-  max: 20.0,
-}).on('change', (value) => {
-  camera.lookAt(
-    new Vector3(value, 0.0, 10.0),
-    Vector3.zero,
-    new Vector3(0.0, 1.0, 0.0)
-  );
+pane.addInput(globalParameters, 'cameraType', {
+  options: {
+    fixed: 'fixed',
+    orbit: 'orbit',
+  }
+}).on('change', value => {
+  if (value === 'fixed') {
+    updateCameraCallback = updateFixedCameraCallback;
+  }
+  if (value === 'orbit') {
+    updateCameraCallback = updateOrbitCameraCallback;
+  }
+  throw new Error('no camera type');
 });
 
+pane.addButton({
+  title: 'relocate orbit camera',
+}).on('click', () => orbitCameraController.reset());
 
 const bloomFolder = pane.addFolder({
   title: 'bloom',
@@ -285,6 +315,21 @@ delayFolder.addInput(globalParameters.delay, 'intensity', {
   max: 0.99,
 }).on('change', value => {
   delayFilter.intensity = value;
+});
+
+const divideFolder = pane.addFolder({
+  title: 'divide',
+  expanded: false,
+});
+divideFolder.addInput(globalParameters.divide, 'active').on('change', value => {
+  divideFilter.active = value;
+});
+divideFolder.addInput(globalParameters.divide, 'divideNum', {
+  min: 1,
+  max: 6,
+  step: 1,
+}).on('change', value => {
+  divideFilter.divideNum = value;
 });
 
 const paneDom = document.getElementsByClassName('tp-dfwv')[0];
