@@ -80,11 +80,16 @@ let updateOrbitCameraCallback = (deltaSecs: number) => {
 }
 let updateCameraCallback: (deltaSecs: number) => void = updateFixedCameraCallback;
 
+const screenSpaceRaymarhParameters = {
+  fold: false,
+}
+
 const screenSpaceRaymarchGeometry = new ScreenSpaceRaymarchGeometry(gl, {
   estimateDisntaceChunk: `
 uniform float u_audioLevel;
 uniform float u_elapsedSecs;
 uniform float u_fftLevels[16];
+uniform bool u_fold;
 
 #define SPHERE_RADIUS 3.0
 
@@ -98,9 +103,15 @@ mat2 rotate(float r) {
   return mat2(c, s, -s, c);
 }
 
+#define smin(a, b, k) (-log2(exp2(-k*a)+exp2(-k*b))/k)
+#define sabs(p, k) (abs(p)-2.0*smin(0.0,abs(p),k))
+
 vec3 toObjectPos(vec3 p) {
-  p.x = abs(p.x) - 3.0;
-  // p.xyz = abs(p.xyz) - 3.0;
+  if (u_fold) {
+    //p.x = abs(p.x) - 3.0;
+    p.xyz = abs(p.xyz) - 3.0;
+    p.y = mod(p.y, 6.0) - 3.0;
+  }
   return p;
 }
 
@@ -115,7 +126,7 @@ float estimateDistance(vec3 p) {
   for (int i = 0; i < 16; i++) {
     p.xy *= rotate(random(float(i)) + u_elapsedSecs);
     p.xz *= rotate(random(float(i) + 0.43) + u_elapsedSecs);
-    p.y += u_audioLevel * u_fftLevels[i] * 0.5 * sin(2.0 * p.x + 5.0 * u_elapsedSecs);
+    p.y += 5.0 * u_audioLevel * u_fftLevels[i] * 0.5 * sin(2.0 * p.x + 5.0 * u_elapsedSecs);
   }
 
   // p.y += u_audioLevel * 5.0 * sin(2.0 * p.x + 5.0 * u_elapsedSecs);
@@ -153,10 +164,11 @@ GBuffer getGBuffer(vec3 worldPosition, vec3 worldNormal) {
   return gBuffer;
 }
   `,
-  uniforms: ['u_audioLevel', 'u_elapsedSecs', ...(new Array(16).fill(null).map((_, i) => `u_fftLevels[${i}]`))],
+  uniforms: ['u_audioLevel', 'u_elapsedSecs', 'u_fold', ...(new Array(16).fill(null).map((_, i) => `u_fftLevels[${i}]`))],
   uniformsCallback: (gl, program) => {
     gl.uniform1f(program.getUniform('u_audioLevel'), audioAnalyzer.level);
     gl.uniform1f(program.getUniform('u_elapsedSecs'), elapsedSecs);
+    gl.uniform1i(program.getUniform('u_fold'), screenSpaceRaymarhParameters.fold ? 1 : 0);
     for (let i = 0; i < 16; i++) {
       gl.uniform1f(program.getUniform(`u_fftLevels[${i}]`), audioAnalyzer.frequencyDomainArray[i * 16]);
     }
@@ -184,8 +196,7 @@ const loop = () => {
   previousTime = currentTime;
 
   updateCameraCallback(deltaSecs);
-  // orbitCameraController.update(deltaSecs);
-
+ 
   gl.enable(gl.DEPTH_TEST);
   gl.bindFramebuffer(gl.FRAMEBUFFER, gBuffer.framebuffer);
   gl.viewport(0.0, 0.0, gBuffer.width, gBuffer.height);
@@ -195,7 +206,6 @@ const loop = () => {
   gl.disable(gl.DEPTH_TEST);
   lightingApplier.apply(gl, gBuffer, hdrTarget, camera);
   hdrTarget.swap();
-
 
   hdrFilters.forEach(filter => {
     if (filter.active) {
@@ -237,6 +247,10 @@ const globalParameters = {
 
   cameraType: 'fixed',
 
+  raymarch: {
+    fold: screenSpaceRaymarhParameters.fold,
+  },
+
   bloom: {
     active: bloomFilter.active,
     threshold: bloomFilter.threshold,
@@ -272,16 +286,24 @@ pane.addInput(globalParameters, 'cameraType', {
 }).on('change', value => {
   if (value === 'fixed') {
     updateCameraCallback = updateFixedCameraCallback;
-  }
-  if (value === 'orbit') {
+  } else if (value === 'orbit') {
     updateCameraCallback = updateOrbitCameraCallback;
+  } else {
+    throw new Error('no camera type');
   }
-  throw new Error('no camera type');
 });
 
 pane.addButton({
   title: 'relocate orbit camera',
 }).on('click', () => orbitCameraController.reset());
+
+const raymarchFolder = pane.addFolder({
+  title: 'raymarch',
+  expanded: false,
+});
+raymarchFolder.addInput(globalParameters.raymarch, 'fold').on('change', value => {
+  screenSpaceRaymarhParameters.fold = value;
+});
 
 const bloomFolder = pane.addFolder({
   title: 'bloom',
