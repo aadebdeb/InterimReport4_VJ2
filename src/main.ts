@@ -53,8 +53,9 @@ const fxaaFilter = new FxaaFilter(gl);
 const delayFilter = new DelayFilter(gl, width, height, {
   intensity: 0.1,
 });
-const divideFilter = new DivideFilter(gl);
-divideFilter.active = false;
+const divideFilter = new DivideFilter(gl, {
+  divideNum: 1,
+});
 const copyToCanvasFilter = new CopyToCanvasFilter(gl);
 
 const hdrFilters: Filter[] = [
@@ -224,7 +225,9 @@ const midiManager = new MidiManager(new Map([
   [[176, 7], (value) => console.log(`slider8: ${value}`)],
 
   // knob1
-  [[176, 16], (value) => console.log(`knob1: ${value}`)],
+  [[176, 16], (value) => {
+    screenSpaceRaymarhParameters.dispIntensity = 10.0 * value;
+  }],
   // knob2
   [[176, 17], (value) => console.log(`knob2: ${value}`)],
   // knob3
@@ -241,21 +244,57 @@ const midiManager = new MidiManager(new Map([
   [[176, 23], (value) => delayFilter.intensity = value,],
 
   // S1, M1, R1
-  [[176, 32], (value) => console.log(`S1: ${value}`)],
-  [[176, 48], (value) => console.log(`M1: ${value}`)],
-  [[176, 64], (value) => console.log(`R1: ${value}`)],
+  [[176, 32], (value) => {
+    if (value === 1) {
+      screenSpaceRaymarhParameters.foldX = !screenSpaceRaymarhParameters.foldX;
+    }
+  }],
+  [[176, 48], (value) => {
+    if (value === 1) {
+      screenSpaceRaymarhParameters.foldZ = !screenSpaceRaymarhParameters.foldZ;
+    }
+  }],
+  [[176, 64], (value) => {
+    if (value === 1) {
+      screenSpaceRaymarhParameters.repeatY = !screenSpaceRaymarhParameters.repeatY;
+    }
+  }],
   // S2, M2, R2
   [[176, 33], (value) => console.log(`S2: ${value}`)],
   [[176, 49], (value) => console.log(`M2: ${value}`)],
   [[176, 65], (value) => console.log(`R2: ${value}`)],
   // S3, M3, R3
-  [[176, 34], (value) => console.log(`S3: ${value}`)],
-  [[176, 50], (value) => console.log(`M3: ${value}`)],
-  [[176, 66], (value) => console.log(`R3: ${value}`)],
+  [[176, 34], (value) => {
+    if (value === 1) {
+      divideFilter.divideNum = 1;
+    }
+  }],
+  [[176, 50], (value) => {
+    if (value === 1) {
+      divideFilter.divideNum = 2;
+    }
+  }],
+  [[176, 66], (value) => {
+    if (value === 1) {
+      divideFilter.divideNum = 3;
+    }
+  }],
   // S4, M4, R4
-  [[176, 35], (value) => console.log(`S4: ${value}`)],
-  [[176, 51], (value) => console.log(`M4: ${value}`)],
-  [[176, 67], (value) => console.log(`R4: ${value}`)],
+  [[176, 35], (value) => {
+    if (value === 1) {
+      divideFilter.divideNum = 4;
+    }
+  }],
+  [[176, 51], (value) => {
+    if (value === 1) {
+      divideFilter.divideNum = 5;
+    }
+  }],
+  [[176, 67], (value) => {
+    if (value === 1) {
+      divideFilter.divideNum = 6;
+    }
+  }],
   // S5, M5, R5
   [[176, 36], (value) => console.log(`S5: ${value}`)],
   [[176, 52], (value) => console.log(`M5: ${value}`)],
