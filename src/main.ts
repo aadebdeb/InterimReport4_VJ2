@@ -17,6 +17,7 @@ import { TonemapFilter } from './filters/tonemapFilter';
 import { BloomFilter } from './filters/bloomFilter';
 import { FxaaFilter } from './filters/fxaaFilter';
 import { DelayFilter } from './filters/delayFilter';
+import { InverseFilter } from './filters/inverseFilter';
 import { DivideFilter } from './filters/divideFilter';
 import { CopyToCanvasFilter } from './filters/copyToCanvasFilter';
 
@@ -53,6 +54,8 @@ const fxaaFilter = new FxaaFilter(gl);
 const delayFilter = new DelayFilter(gl, width, height, {
   intensity: 0.1,
 });
+const inverseFilter = new InverseFilter(gl);
+inverseFilter.active = false;
 const divideFilter = new DivideFilter(gl, {
   divideNum: 1,
 });
@@ -64,6 +67,7 @@ const hdrFilters: Filter[] = [
 const ldrFilters: Filter[] = [
   fxaaFilter,
   delayFilter,
+  inverseFilter,
   divideFilter,
 ];
 
@@ -444,6 +448,9 @@ const globalParameters = {
     active: delayFilter.active,
     intensity: delayFilter.intensity,
   },
+  inverse: {
+    active: inverseFilter.active,
+  },
   divide: {
     active: divideFilter.active,
     divideNum: divideFilter.divideNum,
@@ -542,6 +549,14 @@ delayFolder.addInput(globalParameters.delay, 'intensity', {
   max: 0.99,
 }).on('change', value => {
   delayFilter.intensity = value;
+});
+
+const inverseFolder = pane.addFolder({
+  title: 'inverse',
+  expanded: false,
+});
+inverseFolder.addInput(globalParameters.inverse, 'active').on('change', value => {
+  inverseFilter.active = value;
 });
 
 const divideFolder = pane.addFolder({
