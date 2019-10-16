@@ -45,8 +45,8 @@ let canvasTarget = new CanvasRenderTarget(canvas.width, canvas.height);
 
 const tonemapFilter = new TonemapFilter(gl);
 const bloomFilter = new BloomFilter(gl, width, height, {
-  threshold: 0.95,
-  intensity: 0.1,
+  threshold: 0.8,
+  intensity: 0.05,
   hdr: true,
 });
 const fxaaFilter = new FxaaFilter(gl);
@@ -86,6 +86,7 @@ const screenSpaceRaymarhParameters = {
   foldX: false,
   foldZ: false,
   repeatY: false,
+  boxSubtract: false,
   dispIntensity: 0.0,
 }
 
@@ -97,6 +98,7 @@ uniform float u_fftLevels[16];
 uniform bool u_foldX;
 uniform bool u_foldZ;
 uniform bool u_repeatY;
+uniform bool u_boxSubtract;
 uniform float u_dispIntensity;
 
 #define SPHERE_RADIUS 3.0
@@ -105,10 +107,23 @@ float random(float x){
   return fract(sin(x * 12.9898) * 43758.5453);
 }
 
+vec3 random3(float x) {
+  return fract(sin(x * vec3(12.9898, 51.431, 29.964)) * vec3(43758.5453, 71932.1354, 39215.4221));
+}
+
+vec3 srandom3(float x) {
+  return random3(x) * 2.0 - 1.0;
+}
+
 mat2 rotate(float r) {
   float c = cos(r);
   float s = sin(r);
   return mat2(c, s, -s, c);
+}
+
+float sdBox(vec3 p, vec3 b) {
+  p = abs(p) - b;
+  return length(max(p, 0.0)) + min(max(p.x, max(p.y, p.z)), 0.0);
 }
 
 vec3 toObjectPos(vec3 p) {
@@ -146,7 +161,14 @@ float estimateDistance(vec3 p) {
   // p.y += u_audioLevel * 5.0 * sin(2.0 * p.x + 5.0 * u_elapsedSecs);
   float d =  length(p) - SPHERE_RADIUS;
 
+
   float s = 1000.0;
+  if (u_boxSubtract) {
+    for (float i = 0.0; i < 5.0; i++) {
+        s = min(s, sdBox(q - 5.0 * srandom3(floor(u_elapsedSecs * 7.5) + i), vec3(8.0) * random3(i)));
+    }
+  }
+
   // for (float i = 0.0; i < 5.0; i += 1.0) {
   //   vec3 sp = q + vec3(4.0 * sin(1.43 * u_elapsedSecs), 4.5 * sin(1.52 * u_elapsedSecs), 4.2 * sin(1.73 * u_elapsedSecs));
   //   s = min(s, length(sp) - 3.0);
@@ -184,6 +206,7 @@ GBuffer getGBuffer(vec3 worldPosition, vec3 worldNormal) {
     'u_foldX',
     'u_foldZ',
     'u_repeatY',
+    'u_boxSubtract',
     'u_dispIntensity',
     ...(new Array(16).fill(null).map((_, i) => `u_fftLevels[${i}]`))],
   uniformsCallback: (gl, program) => {
@@ -192,6 +215,7 @@ GBuffer getGBuffer(vec3 worldPosition, vec3 worldNormal) {
     gl.uniform1i(program.getUniform('u_foldX'), screenSpaceRaymarhParameters.foldX ? 1 : 0);
     gl.uniform1i(program.getUniform('u_foldZ'), screenSpaceRaymarhParameters.foldZ ? 1 : 0);
     gl.uniform1i(program.getUniform('u_repeatY'), screenSpaceRaymarhParameters.repeatY ? 1: 0);
+    gl.uniform1i(program.getUniform('u_boxSubtract'), screenSpaceRaymarhParameters.boxSubtract ? 1: 0);
     gl.uniform1f(program.getUniform('u_dispIntensity'), screenSpaceRaymarhParameters.dispIntensity);
     for (let i = 0; i < 16; i++) {
       gl.uniform1f(program.getUniform(`u_fftLevels[${i}]`), audioAnalyzer.frequencyDomainArray[i * 16]);
@@ -407,6 +431,7 @@ const globalParameters = {
     foldX: screenSpaceRaymarhParameters.foldX,
     foldZ: screenSpaceRaymarhParameters.foldZ,
     repeatY: screenSpaceRaymarhParameters.repeatY,
+    boxSubtract: screenSpaceRaymarhParameters.boxSubtract,
     dispIntensity: screenSpaceRaymarhParameters.dispIntensity,
   },
 
@@ -475,6 +500,9 @@ raymarchFolder.addInput(globalParameters.raymarch, 'foldZ').on('change', value =
 raymarchFolder.addInput(globalParameters.raymarch, 'repeatY').on('change', value => {
   screenSpaceRaymarhParameters.repeatY = value;
 });
+raymarchFolder.addInput(globalParameters.raymarch, 'boxSubtract').on('change', value => {
+  screenSpaceRaymarhParameters.boxSubtract = value;
+});
 raymarchFolder.addInput(globalParameters.raymarch, 'dispIntensity', {
   min: 0.0,
   max: 10.0,
@@ -491,13 +519,13 @@ bloomFolder.addInput(globalParameters.bloom, 'active').on('change', value => {
 });
 bloomFolder.addInput(globalParameters.bloom, 'threshold', {
   min: 0.0,
-  max: 5.0,
+  max: 1.0,
 }).on('change', value => {
   bloomFilter.threshold = value;
 })
 bloomFolder.addInput(globalParameters.bloom, 'intensity', {
   min: 0.0,
-  max: 5.0,
+  max: 2.0,
 }).on('change', value => {
   bloomFilter.intensity = value;
 });
