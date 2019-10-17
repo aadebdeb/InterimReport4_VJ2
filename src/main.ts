@@ -19,6 +19,7 @@ import { FxaaFilter } from './filters/fxaaFilter';
 import { DelayFilter } from './filters/delayFilter';
 import { InverseFilter } from './filters/inverseFilter';
 import { DivideFilter } from './filters/divideFilter';
+import { GlitchFilter } from './filters/glitchFilter';
 import { CopyToCanvasFilter } from './filters/copyToCanvasFilter';
 
 const canvas = document.createElement('canvas');
@@ -59,6 +60,12 @@ inverseFilter.active = false;
 const divideFilter = new DivideFilter(gl, {
   divideNum: 1,
 });
+const glitchFilter = new GlitchFilter(gl, {
+  shiftXIntensity: 0.0,
+  shiftYIntensity: 0.0,
+  shiftXRate: 0.0,
+  shiftYRate: 0.0,
+});
 const copyToCanvasFilter = new CopyToCanvasFilter(gl);
 
 const hdrFilters: Filter[] = [
@@ -69,6 +76,7 @@ const ldrFilters: Filter[] = [
   delayFilter,
   inverseFilter,
   divideFilter,
+  glitchFilter,
 ];
 
 const camera = new PerspectiveCamera(width / height, 60.0, 0.1, 100.0);
@@ -390,9 +398,13 @@ const loop = () => {
   lightingApplier.apply(gl, gBuffer, hdrTarget, camera);
   hdrTarget.swap();
 
+  const options = {
+    elapsedSecs: elapsedSecs,
+  }
+
   hdrFilters.forEach(filter => {
     if (filter.active) {
-      filter.apply(gl, hdrTarget, hdrTarget);
+      filter.apply(gl, hdrTarget, hdrTarget, options);
       hdrTarget.swap();
     }
   });
@@ -400,7 +412,7 @@ const loop = () => {
   ldrTarget.swap();
   ldrFilters.forEach(filter => {
     if (filter.active) {
-      filter.apply(gl, ldrTarget, ldrTarget);
+      filter.apply(gl, ldrTarget, ldrTarget, options);
       ldrTarget.swap();
     }
   });
@@ -454,6 +466,13 @@ const globalParameters = {
   divide: {
     active: divideFilter.active,
     divideNum: divideFilter.divideNum,
+  },
+  glitch: {
+    active: glitchFilter.active,
+    shiftXIntensity: glitchFilter.shiftXIntensity,
+    shiftYIntensity: glitchFilter.shiftYIntensity,
+    shiftXRate: glitchFilter.shiftXRate,
+    shiftYRate: glitchFilter.shiftYRate,
   }
 };
 
@@ -572,6 +591,38 @@ divideFolder.addInput(globalParameters.divide, 'divideNum', {
   step: 1,
 }).on('change', value => {
   divideFilter.divideNum = value;
+});
+
+const glitchFolder = pane.addFolder({
+  title: 'glitch',
+  expanded: false,
+});
+glitchFolder.addInput(globalParameters.glitch, 'active').on('change', value => {
+  glitchFilter.active = value;
+});
+glitchFolder.addInput(globalParameters.glitch, 'shiftXIntensity', {
+  min: 0.0,
+  max: 2.0,
+}).on('change', value => {
+  glitchFilter.shiftXIntensity = value;
+});
+glitchFolder.addInput(globalParameters.glitch, 'shiftYIntensity', {
+  min: 0.0,
+  max: 2.0,
+}).on('change', value => {
+  glitchFilter.shiftYIntensity = value;
+});
+glitchFolder.addInput(globalParameters.glitch, 'shiftXRate', {
+  min: 0.0,
+  max: 1.0,
+}).on('change', value => {
+  glitchFilter.shiftXRate = value;
+});
+glitchFolder.addInput(globalParameters.glitch, 'shiftYRate', {
+  min: 0.0,
+  max: 1.0,
+}).on('change', value => {
+  glitchFilter.shiftYRate = value;
 });
 
 const paneDom = document.getElementsByClassName('tp-dfwv')[0];

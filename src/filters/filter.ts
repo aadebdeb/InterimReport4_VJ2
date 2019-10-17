@@ -5,9 +5,10 @@ import { Camera } from '../cameras/camera';
 export type FilterOptions = {
   gBuffer?: GBuffer,
   camera?: Camera,
+  elapsedSecs?: number,
 }
 
 export interface Filter {
   active: boolean;
-  apply(gl: WebGL2RenderingContext, src: RenderTarget, dst: RenderTarget): void;
+  apply(gl: WebGL2RenderingContext, src: RenderTarget, dst: RenderTarget, options?: FilterOptions): void;
 }
