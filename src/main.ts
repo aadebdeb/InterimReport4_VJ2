@@ -20,6 +20,7 @@ import { DelayFilter } from './filters/delayFilter';
 import { InverseFilter } from './filters/inverseFilter';
 import { DivideFilter } from './filters/divideFilter';
 import { GlitchFilter } from './filters/glitchFilter';
+import { FlabbilyFilter } from './filters/flabbilyFilter';
 import { CopyToCanvasFilter } from './filters/copyToCanvasFilter';
 
 const canvas = document.createElement('canvas');
@@ -37,8 +38,8 @@ const statsWrapper = document.createElement('div');
 statsWrapper.appendChild(stats.dom);
 document.body.appendChild(statsWrapper);
 
-const width = 1280;
-const height = 720;
+const width = 1280 * 1.2;
+const height = 720 * 1.2;
 
 const gBuffer = new GBuffer(gl, width, height);
 const hdrTarget = new SwappableHdrRenderTarget(gl, width, height);
@@ -66,6 +67,9 @@ const glitchFilter = new GlitchFilter(gl, {
   shiftXRate: 0.0,
   shiftYRate: 0.0,
 });
+const flabbilyFilter = new FlabbilyFilter(gl, {
+  intensity: 0.0,
+});
 const copyToCanvasFilter = new CopyToCanvasFilter(gl);
 
 const hdrFilters: Filter[] = [
@@ -76,6 +80,7 @@ const ldrFilters: Filter[] = [
   delayFilter,
   inverseFilter,
   divideFilter,
+  flabbilyFilter,
   glitchFilter,
 ];
 
@@ -492,6 +497,10 @@ const globalParameters = {
     shiftYIntensity: glitchFilter.shiftYIntensity,
     shiftXRate: glitchFilter.shiftXRate,
     shiftYRate: glitchFilter.shiftYRate,
+  },
+  flabbily: {
+    active: flabbilyFilter.active,
+    intensity: flabbilyFilter.intensity,
   }
 };
 
@@ -645,6 +654,20 @@ glitchFolder.addInput(globalParameters.glitch, 'shiftYRate', {
   max: 1.0,
 }).on('change', value => {
   glitchFilter.shiftYRate = value;
+});
+
+const flabbilyFolder = pane.addFolder({
+  title: 'flabbily',
+  expanded: false
+});
+flabbilyFolder.addInput(globalParameters.flabbily, 'active').on('change', value => {
+  flabbilyFilter.active = value;
+});
+flabbilyFolder.addInput(globalParameters.flabbily, 'intensity', {
+  min: 0.0,
+  max: 0.2
+}).on('change', value => {
+  flabbilyFilter.intensity = value;
 });
 
 const paneDom = document.getElementsByClassName('tp-dfwv')[0];
