@@ -28,6 +28,10 @@ export class DivideFilter implements Filter {
     this.divideNum = divideNum;
   }
 
+  get effective(): boolean {
+    return this.divideNum > 1;
+  }
+
   apply(gl: WebGL2RenderingContext, src: RenderTarget, dst: RenderTarget): void {
     gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
     gl.viewport(0.0, 0.0, dst.width, dst.height);

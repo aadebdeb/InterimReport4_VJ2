@@ -43,6 +43,11 @@ export class GlitchFilter implements Filter {
     this.shiftYRate = shiftYRate;
   }
 
+  get effective(): boolean {
+    return (this.shiftXIntensity > 0.0 && this.shiftXRate > 0.0)
+      || (this.shiftYIntensity > 0.0 && this.shiftYRate > 0.0);
+  }
+
   apply(gl: WebGL2RenderingContext, src: RenderTarget, dst: RenderTarget, options: FilterOptions = {}): void {
     if (options.elapsedSecs === undefined) {
       throw new Error('elapsedSecs needed.');

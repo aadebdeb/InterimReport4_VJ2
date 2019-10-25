@@ -19,6 +19,10 @@ export class CopyToCanvasFilter implements Filter {
       copyToCanvasFragmentSource, new Set(Object.values(Uniforms))));
   }
 
+  get effective(): boolean {
+    return true;
+  }
+
   apply(gl: WebGL2RenderingContext, src: RenderTarget, dst: RenderTarget) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
     gl.viewport(0.0, 0.0, dst.width, dst.height);

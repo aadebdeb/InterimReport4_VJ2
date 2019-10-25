@@ -10,5 +10,6 @@ export type FilterOptions = {
 
 export interface Filter {
   active: boolean;
+  readonly effective: boolean;
   apply(gl: WebGL2RenderingContext, src: RenderTarget, dst: RenderTarget, options?: FilterOptions): void;
 }

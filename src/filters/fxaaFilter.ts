@@ -18,6 +18,10 @@ export class FxaaFilter implements Filter {
     this.program = createFillViewportProgram(gl, new FragmentShader(gl, fxaaFragmentSource, new Set(Object.values(Uniforms))));
   }
 
+  get effective(): boolean {
+    return true;
+  }
+
   apply(gl: WebGL2RenderingContext, src: RenderTarget, dst: RenderTarget): void {
     gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
     gl.viewport(0.0, 0.0, dst.width, dst.height);

@@ -421,7 +421,7 @@ const loop = () => {
   }
 
   hdrFilters.forEach(filter => {
-    if (filter.active) {
+    if (filter.active && filter.effective) {
       filter.apply(gl, hdrTarget, hdrTarget, options);
       hdrTarget.swap();
     }
@@ -429,7 +429,7 @@ const loop = () => {
   tonemapFilter.apply(gl, hdrTarget, ldrTarget);
   ldrTarget.swap();
   ldrFilters.forEach(filter => {
-    if (filter.active) {
+    if (filter.active && filter.effective) {
       filter.apply(gl, ldrTarget, ldrTarget, options);
       ldrTarget.swap();
     }

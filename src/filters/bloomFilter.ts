@@ -60,6 +60,10 @@ export class BloomFilter implements Filter {
     this.blurApplier3 = new BlurApplier(gl, width / 32.0, height / 32.0, {hdr: true});
   }
 
+  get effective(): boolean {
+    return this.intensity > 0.0;
+  }
+
   apply(gl: WebGL2RenderingContext, src: RenderTarget, dst: RenderTarget): void {
     this.extractLuminance(gl, src);
     const blurTexture0 = this.blurApplier0.apply(gl, this.luminanceRenderTarget);

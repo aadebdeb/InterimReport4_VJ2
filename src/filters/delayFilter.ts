@@ -38,6 +38,10 @@ export class DelayFilter implements Filter {
     this.copyFilter = new CopyFilter(gl);
   }
 
+  get effective(): boolean {
+    return this.intensity > 0.0;
+  }
+
   apply(gl: WebGL2RenderingContext, src: RenderTarget, dst: RenderTarget): void {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.renderTarget.framebuffer);
     gl.viewport(0.0, 0.0, this.renderTarget.width, this.renderTarget.height);
