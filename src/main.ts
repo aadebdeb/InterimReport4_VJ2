@@ -254,11 +254,17 @@ const midiManager = new MidiManager(new Map([
   // slider5
   [[176, 4], (value) => console.log(`slider5: ${value}`)],
   // slider6
-  [[176, 5], (value) => console.log(`slider6: ${value}`)],
+  [[176, 5], (value) => {
+    glitchFilter.shiftXIntensity = 2.0 * value;
+  }],
   // slider7
-  [[176, 6], (value) => console.log(`slider7: ${value}`)],
+  [[176, 6], (value) => {
+    glitchFilter.shiftYIntensity = 2.0 * value;
+  }],
   // slider8
-  [[176, 7], (value) => console.log(`slider8: ${value}`)],
+  [[176, 7], (value) => {
+    bloomFilter.intensity = value * 0.05;
+  }],
 
   // knob1
   [[176, 16], (value) => {
@@ -273,9 +279,13 @@ const midiManager = new MidiManager(new Map([
   // knob5
   [[176, 20], (value) => console.log(`knob5: ${value}`)],
   // knob6
-  [[176, 21], (value) => console.log(`knob6: ${value}`)],
+  [[176, 21], (value) => {
+    glitchFilter.shiftXRate = value;
+  }],
   // knob7
-  [[176, 22], (value) => console.log(`knob7: ${value}`)],
+  [[176, 22], (value) => {
+    glitchFilter.shiftYRate = value;
+  }],
   // knob8
   [[176, 23], (value) => delayFilter.intensity = value,],
 
@@ -361,14 +371,22 @@ const midiManager = new MidiManager(new Map([
     }
   }],
   // Forward
-  [[176, 44], (value) => console.log(`Forward: ${value}`)],
+  [[176, 44], (value) => {
+    if (value === 1) {
+      orbitCameraController.reset();
+    }
+  }],
 
   // Stop
   [[176, 42], (value) => console.log(`Stop: ${value}`)],
   // Start
   [[176, 41], (value) => console.log(`Start: ${value}`)],
   // Record
-  [[176, 45], (value) => console.log(`Start: ${value}`)],
+  [[176, 45], (value) => {
+    if (value === 1.0) {
+      screenSpaceRaymarhParameters.boxSubtract = !screenSpaceRaymarhParameters.boxSubtract;
+    }
+  }],
 
 ]));
 
