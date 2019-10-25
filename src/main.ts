@@ -484,6 +484,7 @@ const globalParameters = {
   divide: {
     active: divideFilter.active,
     divideNum: divideFilter.divideNum,
+    inverse: divideFilter.inverse,
   },
   glitch: {
     active: glitchFilter.active,
@@ -609,6 +610,9 @@ divideFolder.addInput(globalParameters.divide, 'divideNum', {
   step: 1,
 }).on('change', value => {
   divideFilter.divideNum = value;
+});
+divideFolder.addInput(globalParameters.divide, 'inverse').on('change', value => {
+  divideFilter.inverse = value;
 });
 
 const glitchFolder = pane.addFolder({
