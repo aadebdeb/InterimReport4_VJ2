@@ -20,6 +20,7 @@ import { DelayFilter } from './filters/delayFilter';
 import { InverseFilter } from './filters/inverseFilter';
 import { DivideFilter } from './filters/divideFilter';
 import { GlitchFilter } from './filters/glitchFilter';
+import { ColorGlitchFilter } from './filters/colorGlitchFilter';
 import { FlabbilyFilter } from './filters/flabbilyFilter';
 import { CopyToCanvasFilter } from './filters/copyToCanvasFilter';
 
@@ -67,6 +68,9 @@ const glitchFilter = new GlitchFilter(gl, {
   shiftXRate: 0.0,
   shiftYRate: 0.0,
 });
+const colorGlitchFilter = new ColorGlitchFilter(gl, {
+  intensity: 0.0,
+});
 const flabbilyFilter = new FlabbilyFilter(gl, {
   intensity: 0.0,
 });
@@ -81,6 +85,7 @@ const ldrFilters: Filter[] = [
   inverseFilter,
   divideFilter,
   flabbilyFilter,
+  colorGlitchFilter,
   glitchFilter,
 ];
 
@@ -498,6 +503,10 @@ const globalParameters = {
     shiftXRate: glitchFilter.shiftXRate,
     shiftYRate: glitchFilter.shiftYRate,
   },
+  colorGlitch: {
+    active: colorGlitchFilter.active,
+    intensity: colorGlitchFilter.intensity,
+  },
   flabbily: {
     active: flabbilyFilter.active,
     intensity: flabbilyFilter.intensity,
@@ -654,6 +663,20 @@ glitchFolder.addInput(globalParameters.glitch, 'shiftYRate', {
   max: 1.0,
 }).on('change', value => {
   glitchFilter.shiftYRate = value;
+});
+
+const colorGlitchFolder = pane.addFolder({
+  title: 'colorGlitch',
+  expanded: false,
+});
+colorGlitchFolder.addInput(globalParameters.colorGlitch, 'active').on('change', value => {
+  colorGlitchFilter.active = value;
+});
+colorGlitchFolder.addInput(globalParameters.colorGlitch, 'intensity', {
+  min: 0.0,
+  max: 1.0,
+}).on('change', value => {
+  colorGlitchFilter.intensity = value;
 });
 
 const flabbilyFolder = pane.addFolder({
