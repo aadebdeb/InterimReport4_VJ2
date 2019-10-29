@@ -710,10 +710,12 @@ addEventListener('keydown', (e) => {
     if (enableGui) {
       statsWrapper.setAttribute('style', 'display: none;');
       paneDom.setAttribute('style', 'display: none;');
+      canvas.setAttribute('style', 'cursor: none;');
       enableGui = false;
     } else {
       statsWrapper.removeAttribute('style');
       paneDom.removeAttribute('style');
+      canvas.removeAttribute('style');
       enableGui = true;
     }
   }
