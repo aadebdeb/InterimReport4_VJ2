@@ -258,19 +258,19 @@ const midiManager = new MidiManager(new Map([
   // slider2
   [[176, 1], (value) => console.log(`slider2: ${value}`)],
   // slider3
-  [[176, 2], (value) => console.log(`slider3: ${value}`)],
+  [[176, 2], (value) => {
+    glitchFilter.shiftXIntensity = 2.0 * value;
+  }],
   // slider4
-  [[176, 3], (value) => console.log(`slider4: ${value}`)],
+  [[176, 3], (value) => {
+    glitchFilter.shiftYIntensity = 2.0 * value;
+  }],
   // slider5
   [[176, 4], (value) => console.log(`slider5: ${value}`)],
   // slider6
-  [[176, 5], (value) => {
-    glitchFilter.shiftXIntensity = 2.0 * value;
-  }],
+  [[176, 5], () => {}],
   // slider7
-  [[176, 6], (value) => {
-    glitchFilter.shiftYIntensity = 2.0 * value;
-  }],
+  [[176, 6], (_) => {}],
   // slider8
   [[176, 7], (value) => {
     bloomFilter.intensity = value * 0.05;
@@ -281,23 +281,19 @@ const midiManager = new MidiManager(new Map([
     screenSpaceRaymarhParameters.dispIntensity = 10.0 * value;
   }],
   // knob2
-  [[176, 17], (value) => console.log(`knob2: ${value}`)],
+  [[176, 17], (value) => delayFilter.intensity = value * 0.8],
   // knob3
-  [[176, 18], (value) => console.log(`knob3: ${value}`)],
+  [[176, 18], (value) => glitchFilter.shiftXRate = value],
   // knob4
-  [[176, 19], (value) => console.log(`knob4: ${value}`)],
+  [[176, 19], (value) => glitchFilter.shiftYRate = value],
   // knob5
-  [[176, 20], (value) => console.log(`knob5: ${value}`)],
+  [[176, 20], (value) => colorGlitchFilter.intensity = value],
   // knob6
-  [[176, 21], (value) => {
-    glitchFilter.shiftXRate = value;
-  }],
+  [[176, 21], (value) => flabbilyFilter.intensity = value * 0.2],
   // knob7
-  [[176, 22], (value) => {
-    glitchFilter.shiftYRate = value;
-  }],
+  [[176, 22], () => {}],
   // knob8
-  [[176, 23], (value) => delayFilter.intensity = value,],
+  [[176, 23], (value) => audioAnalyzer.gain = value],
 
   // S1, M1, R1
   [[176, 32], (value) => {
@@ -316,41 +312,41 @@ const midiManager = new MidiManager(new Map([
     }
   }],
   // S2, M2, R2
-  [[176, 33], (value) => console.log(`S2: ${value}`)],
-  [[176, 49], (value) => console.log(`M2: ${value}`)],
-  [[176, 65], (value) => console.log(`R2: ${value}`)],
-  // S3, M3, R3
-  [[176, 34], (value) => {
+  [[176, 33], (value) => {
     if (value === 1) {
       divideFilter.divideNum = 1;
     }
   }],
-  [[176, 50], (value) => {
+  [[176, 49], (value) => {
     if (value === 1) {
       divideFilter.divideNum = 2;
     }
   }],
-  [[176, 66], (value) => {
+  [[176, 65], (value) => {
     if (value === 1) {
       divideFilter.divideNum = 3;
     }
   }],
-  // S4, M4, R4
-  [[176, 35], (value) => {
+  // S3, M3, R3
+  [[176, 34], (value) => {
     if (value === 1) {
       divideFilter.divideNum = 4;
     }
   }],
-  [[176, 51], (value) => {
+  [[176, 50], (value) => {
     if (value === 1) {
       divideFilter.divideNum = 5;
     }
   }],
-  [[176, 67], (value) => {
+  [[176, 66], (value) => {
     if (value === 1) {
       divideFilter.divideNum = 6;
     }
   }],
+  // S4, M4, R4
+  [[176, 35], () => {}],
+  [[176, 51], () => {}],
+  [[176, 67], () => {}],
   // S5, M5, R5
   [[176, 36], (value) => console.log(`S5: ${value}`)],
   [[176, 52], (value) => console.log(`M5: ${value}`)],
@@ -388,9 +384,23 @@ const midiManager = new MidiManager(new Map([
   }],
 
   // Stop
-  [[176, 42], (value) => console.log(`Stop: ${value}`)],
+  [[176, 42], (value) => {
+    if (value === 1) {
+      updateCameraCallback = updateFixedCameraCallback;
+      screenSpaceRaymarhParameters.foldX = false;
+      screenSpaceRaymarhParameters.foldZ = false;
+      screenSpaceRaymarhParameters.repeatY = false;
+    }
+  }],
   // Start
-  [[176, 41], (value) => console.log(`Start: ${value}`)],
+  [[176, 41], (value) => {
+    if (value === 1) {
+      updateCameraCallback = updateOrbitCameraCallback;
+      screenSpaceRaymarhParameters.foldX = true;
+      screenSpaceRaymarhParameters.foldZ = true;
+      screenSpaceRaymarhParameters.repeatY = true;
+    }
+  }],
   // Record
   [[176, 45], (value) => {
     if (value === 1.0) {
