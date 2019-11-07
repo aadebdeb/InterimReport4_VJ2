@@ -39,8 +39,8 @@ const statsWrapper = document.createElement('div');
 statsWrapper.appendChild(stats.dom);
 document.body.appendChild(statsWrapper);
 
-const width = 1280 * 1.2;
-const height = 720 * 1.2;
+const width = 1280 * 1.5;
+const height = 720 * 1.5;
 
 const gBuffer = new GBuffer(gl, width, height);
 const hdrTarget = new SwappableHdrRenderTarget(gl, width, height);
